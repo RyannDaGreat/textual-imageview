@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 
 from PIL import Image
 from textual.app import App, ComposeResult
@@ -12,8 +12,7 @@ from textual_imageview.viewer import ImageViewer
 
 
 class ImageViewerApp(App):
-    """Sample Textual app that uses the ImageViewer widget to view images. This app
-    also includes keyboard suppport for translating and scaling the image."""
+    """A Textual app to view multiple images with navigation."""
 
     TITLE = "vimg"
 
@@ -33,22 +32,21 @@ class ImageViewerApp(App):
         Binding("D,shift+right", "move(-3, 0)", "Fast Right", show=False),
         Binding("E,+", "zoom(-2)", "Fast Zoom In", show=False),
         Binding("Q,_", "zoom(2)", "Fast Zoom Out", show=False),
+        # Image navigation
+        Binding(">", "next_image", "Next Image", show=True),
+        Binding("<", "previous_image", "Previous Image", show=True),
     ]
 
-    def __init__(self, image_path: Union[str, Path]):
-        """Inits vimg
-
-        Args:
-            image_path (Path or str): Path of image to view.
-        """
+    def __init__(self, image_paths: List[Union[str, Path]]):
         super().__init__()
-        image_path = Path(image_path)
-        if not image_path.exists():
-            print(f"{image_path} does not exist.")
-            exit()
-
-        self.sub_title = image_path.name
-        self.image = Image.open(image_path)
+        self.image_paths = [Path(p) for p in image_paths]
+        for p in self.image_paths:
+            if not p.exists():
+                print(f"{p} does not exist.")
+                exit()
+        self.current_index = 0
+        self.sub_title = self.image_paths[self.current_index].name
+        self.image = Image.open(self.image_paths[self.current_index])
         self.image_viewer = ImageViewer(self.image)
 
     def action_move(self, delta_x: int, delta_y: int):
@@ -61,6 +59,20 @@ class ImageViewerApp(App):
         self.image_viewer.refresh()
         self.refresh()
 
+    def action_next_image(self):
+        self.current_index = (self.current_index + 1) % len(self.image_paths)
+        self.update_image_viewer()
+
+    def action_previous_image(self):
+        self.current_index = (self.current_index - 1) % len(self.image_paths)
+        self.update_image_viewer()
+
+    def update_image_viewer(self):
+        self.image = Image.open(self.image_paths[self.current_index])
+        self.image_viewer.set_image(self.image)
+        self.sub_title = self.image_paths[self.current_index].name
+        self.refresh()
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield self.image_viewer
@@ -69,8 +81,8 @@ class ImageViewerApp(App):
 
 def vimg():
     """CLI entry point"""
-    parser = ArgumentParser(description="A simple terminal-based image viewer.")
-    parser.add_argument("image_path", help="Path of image to view.")
+    parser = ArgumentParser(description="A terminal-based image viewer.")
+    parser.add_argument("image_paths", nargs="+", help="Paths of images to view.")
     parser.add_argument(
         "-v",
         "--version",
@@ -81,7 +93,7 @@ def vimg():
 
     args = parser.parse_args()
 
-    app = ImageViewerApp(args.image_path)
+    app = ImageViewerApp(args.image_paths)
     app.run()
 
 if __name__ == '__main__':

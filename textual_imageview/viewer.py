@@ -18,15 +18,20 @@ class ImageViewer(Widget):
 
     def __init__(self, image: Image.Image):
         super().__init__()
+        self.set_image(image)
+        self.mouse_down = False
+
+    def set_image(self, image: Image.Image):
         if not isinstance(image, Image.Image):
             raise TypeError(
                 f"Expected PIL Image, but received '{type(image).__name__}' instead."
             )
-
         self.image = ImageView(image)
-        self.mouse_down = False
+        self.reset_view()
 
-    def on_show(self):
+    def reset_view(self):
+        if not self.image:
+            return
         w, h = self.size.width, self.size.height
         img_w, img_h = self.image.size
 
@@ -42,6 +47,9 @@ class ImageViewer(Widget):
         self.image.set_container_size(w, h, maintain_center=False)
 
         self.refresh()
+
+    def on_show(self):
+        self.reset_view()
 
     def on_mouse_scroll_down(self, event: events.MouseScrollDown):
         offset = self.region.offset
