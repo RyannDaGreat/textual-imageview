@@ -83,3 +83,6 @@ def vimg():
 
     app = ImageViewerApp(args.image_path)
     app.run()
+
+if __name__ == '__main__':
+    vimg()
